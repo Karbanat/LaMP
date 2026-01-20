@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC-Shop.gg | Игровые компьютеры</title>
+    <link rel="icon" href="static/imgs/favicon.png" type="image/png">
+    <link rel="PC-Shop-gg-icon" href="static/imgs/favicon.png"><link rel="icon" href="static/imgs/favicon.png" type="image/png">
+    <link rel="PC-Shop-gg-icon" href="static/imgs/favicon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --neon-blue: #0ff0fc;
+            --neon-purple: #bc13fe;
+            --neon-green: #39ff14;
+            --neon-pink: #ff00ff;
+            --dark-bg: #0a0a0f;
+            --darker-bg: #050508;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .neon-blue {
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+        }
+        
+        .neon-purple {
+            color: var(--neon-purple);
+            text-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple);
+        }
+        
+        .neon-green {
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+        }
+        
+        .neon-border {
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 15px var(--neon-blue), inset 0 0 15px var(--neon-blue);
+        }
+        
+        .neon-button {
+            background: linear-gradient(45deg, var(--neon-purple), var(--neon-blue));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 5px white;
+        }
+        
+        .neon-button:hover {
+            box-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-purple);
+            transform: translateY(-2px);
+        }
+        
+        .neon-card {
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid rgba(11, 240, 252, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .neon-card:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 25px rgba(11, 240, 252, 0.4);
+            transform: translateY(-5px);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        .glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            }
+            to {
+                text-shadow: 0 0 20px var(--neon-blue), 0 0 30px var(--neon-purple), 0 0 40px var(--neon-purple);
+            }
+        }
+        
+        .active-tab {
+            background: linear-gradient(45deg, rgba(11, 240, 252, 0.2), rgba(188, 19, 254, 0.2));
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue) !important;
+            font-weight: 600;
+        }
+        
+        .cart-badge {
+            background: linear-gradient(45deg, #ff0000, #ff4d00);
+            box-shadow: 0 0 10px #ff0000;
+        }
+        
+        input, select, textarea {
+            background: rgba(20, 20, 30, 0.7) !important;
+            border: 1px solid rgba(11, 240, 252, 0.3) !important;
+            color: white !important;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--neon-blue) !important;
+            box-shadow: 0 0 10px var(--neon-blue) !important;
+            outline: none !important;
+        }
+    </style>
+</head>
+<body class="text-gray-100">
+    <div id="root" class="min-h-screen"></div>
+
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const API_BASE_URL = "http://localhost:8000";
+
+        const App = () => {
+            const [selectedProduct, setSelectedProduct] = useState(null);
+            const [cart, setCart] = useState([]);
+            const [showCart, setShowCart] = useState(false);
+            const [deliveryDate, setDeliveryDate] = useState('');
+            const [deliveryTime, setDeliveryTime] = useState('');
+            const [deliveryAddress, setDeliveryAddress] = useState('');
+            const [activeTab, setActiveTab] = useState('products');
+            const [orders, setOrders] = useState([]);
+            const [editingOrder, setEditingOrder] = useState(null);
+            const [products, setProducts] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            const staticProductImages = {
+                1: `${API_BASE_URL}/static/imgs/light.png`,
+                2: `${API_BASE_URL}/static/imgs/medium.png`,
+                3: `${API_BASE_URL}/static/imgs/normal.png`,
+                4: `${API_BASE_URL}/static/imgs/pro.png`,
+                5: `${API_BASE_URL}/static/imgs/pro-hard.png`
+            };
+
+            useEffect(() => {
+                fetchProducts();
+                fetchOrders();
+            }, []);
+
+            const fetchProducts = async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/products/`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+
+                    const processedProducts = data.map(product => ({
+                        ...product,
+                        image: product.image_url || staticProductImages[product.id] || `${API_BASE_URL}/static/imgs/default.png`
+                    }));
+
+                    setProducts(processedProducts);
+                } catch (error) {
+                    console.error('Error fetching products:', error);
+                    setProducts([
+                        {
+                            id: 1,
+                            name: 'PC-Shop Light Edition',
+                            price: 45000,
+                            image: `${API_BASE_URL}/static/imgs/light.png`,
+                            description: 'Базовый игровой компьютер: RTX 3050, i5-12400F, 16GB RAM, 500GB SSD'
+                        },
+                        {
+                            id: 2,
+                            name: 'PC-Shop Medium Edition',
+                            price: 75000,
+                            image: `${API_BASE_URL}/static/imgs/medium.png`,
+                            description: 'Средний игровой компьютер: RTX 3060, i5-13400F, 32GB RAM, 1TB SSD'
+                        },
+                        {
+                            id: 3,
+                            name: 'PC-Shop Normal Edition',
+                            price: 95000,
+                            image: `${API_BASE_URL}/static/imgs/normal.png`,
+                            description: 'Оптимальный игровой компьютер: RTX 4060, i7-13700F, 32GB RAM, 2TB NVME'
+                        },
+                        {
+                            id: 4,
+                            name: 'PC-Shop Pro Edition',
+                            price: 145000,
+                            image: `${API_BASE_URL}/static/imgs/pro.png`,
+                            description: 'Профессиональный игровой компьютер: RTX 4070 Ti, i7-14700K, 64GB RAM, 2TB NVME'
+                        },
+                        {
+                            id: 5,
+                            name: 'PC-Shop Pro-Hard Edition',
+                            price: 220000,
+                            image: `${API_BASE_URL}/static/imgs/pro-hard.png`,
+                            description: 'Максимальная производительность: RTX 4090, i9-14900K, 128GB RAM, 4TB NVME'
+                        }
+                    ]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const fetchOrders = async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/orders/`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setOrders(data);
+                    }
+                } catch (error) {
+                    console.error('Error fetching orders:', error);
+                }
+            };
+
+            const getAvailableDates = () => {
+                const dates = [];
+                const today = new Date();
+                for (let i = 1; i <= 7; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    dates.push({
+                        value: date.toISOString().split('T')[0],
+                        label: date.toLocaleDateString('ru-RU', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short'
+                        })
+                    });
+                }
+                return dates;
+            };
+
+            const deliveryTimes = [
+                { value: "10:00", label: "10:00" },
+                { value: "14:00", label: "14:00" },
+                { value: "18:00", label: "18:00" }
+            ];
+
+            const addToCart = (product) => {
+                setCart(prev => {
+                    const existing = prev.find(item => item.id === product.id);
+                    if (existing) {
+                        return prev.map(item =>
+                            item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                        );
+                    }
+                    return [...prev, { ...product, quantity: 1 }];
+                });
+                setSelectedProduct(null);
+            };
+
+            const removeFromCart = (id) => {
+                setCart(prev => prev.filter(item => item.id !== id));
+            };
+
+            const updateQuantity = (id, quantity) => {
+                if (quantity < 1) return;
+                setCart(prev => prev.map(item =>
+                    item.id === id ? { ...item, quantity } : item
+                ));
+            };
+
+            const placeOrder = async () => {
+                if (!deliveryDate || !deliveryTime || !deliveryAddress) {
+                    alert('Заполните все поля доставки');
+                    return;
+                }
+
+                try {
+                    const orderData = {
+                        delivery_date: deliveryDate,
+                        delivery_time: deliveryTime,
+                        delivery_address: deliveryAddress,
+                        status: 'pending',
+                        total_price: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+                        items: cart.map(item => ({
+                            product_id: item.id,
+                            product_name: item.name,
+                            quantity: item.quantity,
+                            price: item.price
+                        }))
+                    };
+
+                    const response = await fetch(`${API_BASE_URL}/api/orders/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(orderData)
+                    });
+
+                    if (response.ok) {
+                        const newOrder = await response.json();
+                        setCart([]);
+                        setDeliveryDate('');
+                        setDeliveryTime('');
+                        setDeliveryAddress('');
+                        setShowCart(false);
+                        setOrders(prev => [newOrder, ...prev]);
+                        alert('Заказ успешно создан!');
+                    } else {
+                        const error = await response.text();
+                        throw new Error(error || 'Ошибка при создании заказа');
+                    }
+                } catch (error) {
+                    console.error('Error creating order:', error);
+                    alert(`Ошибка: ${error.message}`);
+                }
+            };
+
+            const startEditOrder = (order) => {
+                setEditingOrder({
+                    ...order,
+                    delivery_date: order.delivery_date
+                });
+            };
+
+            const saveEditedOrder = async () => {
+                if (!editingOrder.delivery_date || !editingOrder.delivery_time || !editingOrder.delivery_address) {
+                    alert('Заполните все поля');
+                    return;
+                }
+
+                try {
+                    const updateData = {
+                        delivery_date: editingOrder.delivery_date,
+                        delivery_time: editingOrder.delivery_time,
+                        delivery_address: editingOrder.delivery_address
+                    };
+
+                    const response = await fetch(`${API_BASE_URL}/api/orders/${editingOrder.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+
+                    if (response.ok) {
+                        const updatedOrder = await response.json();
+                        setOrders(prev => prev.map(order =>
+                            order.id === updatedOrder.id ? updatedOrder : order
+                        ));
+                        setEditingOrder(null);
+                        alert('Заказ успешно обновлен!');
+                    } else {
+                        const error = await response.text();
+                        throw new Error(error || 'Ошибка при обновлении заказа');
+                    }
+                } catch (error) {
+                    console.error('Error updating order:', error);
+                    alert(`Ошибка: ${error.message}`);
+                }
+            };
+
+            const cancelOrder = async (orderId) => {
+                if (!confirm('Вы уверены, что хотите отменить этот заказ?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        setOrders(prev => prev.map(order =>
+                            order.id === orderId ? { ...order, status: 'cancelled' } : order
+                        ));
+                        alert('Заказ отменен!');
+                    } else {
+                        const error = await response.text();
+                        throw new Error(error || 'Ошибка при отмене заказа');
+                    }
+                } catch (error) {
+                    console.error('Error cancelling order:', error);
+                    alert(`Ошибка: ${error.message}`);
+                }
+            };
+
+            if (loading) {
+                return React.createElement('div', { className: "flex justify-center items-center min-h-screen" },
+                    React.createElement('div', { className: "text-center" },
+                        React.createElement('div', { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-neon-blue mx-auto" }),
+                        React.createElement('p', { className: "mt-4 neon-text neon-blue" }, "Загрузка PC-Shop...")
+                    )
+                );
+            }
+
+            return React.createElement('div', { className: "min-h-screen" },
+
+                React.createElement('header', { className: "bg-gradient-to-r from-gray-900 to-black border-b border-neon-blue/30 py-4" },
+                    React.createElement('div', { className: "container mx-auto px-4" },
+                        React.createElement('div', { className: "flex justify-between items-center" },
+                            React.createElement('div', { className: "flex items-center space-x-4" },
+                                React.createElement('img', {
+                                    src: `${API_BASE_URL}/static/imgs/logo.png`,
+                                    alt: 'PC-Shop.gg',
+                                    className: "h-12 w-auto glow",
+                                    onError: (e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = `${API_BASE_URL}/static/imgs/default.png`;
+                                    }
+                                }),
+                                React.createElement('div', null,
+                                    React.createElement('h1', { className: "text-2xl font-bold neon-blue glow" }, "PC-Shop.gg"),
+                                    React.createElement('p', { className: "text-sm neon-purple" }, "Игровые компьютеры высшего класса")
+                                ),
+                                React.createElement('div', { className: "hidden md:flex space-x-2 ml-8" },
+                                    React.createElement('button', {
+                                        onClick: () => setActiveTab('products'),
+                                        className: `px-4 py-2 rounded-lg transition ${activeTab === 'products' ? 'active-tab' : 'hover:bg-gray-800/50'}`
+                                    }, "🖥️ Компьютеры"),
+                                    React.createElement('button', {
+                                        onClick: () => setActiveTab('orders'),
+                                        className: `px-4 py-2 rounded-lg transition ${activeTab === 'orders' ? 'active-tab' : 'hover:bg-gray-800/50'}`
+                                    }, "📦 Заказы")
+                                )
+                            ),
+                            React.createElement('button', {
+                                onClick: () => setShowCart(true),
+                                className: "neon-button p-3 rounded-full relative"
+                            },
+                                React.createElement('svg', {
+                                    className: "w-6 h-6",
+                                    fill: "none",
+                                    stroke: "currentColor",
+                                    viewBox: "0 0 24 24"
+                                },
+                                React.createElement('path', {
+                                    strokeLinecap: "round",
+                                    strokeLinejoin: "round",
+                                    strokeWidth: 2,
+                                    d: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                                })),
+                                cart.length > 0 && React.createElement('span', {
+                                    className: "cart-badge absolute -top-1 -right-1 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold"
+                                }, cart.reduce((sum, item) => sum + item.quantity, 0))
+                            )
+                        )
+                    )
+                ),
+
+                React.createElement('main', { className: "container mx-auto px-4 py-8" },
+                    activeTab === 'products' && React.createElement('div', null,
+                        React.createElement('h2', { className: "text-2xl font-bold mb-8 neon-text neon-green text-center" }, "Игровые Компьютеры"),
+                        products.length === 0 ?
+                            React.createElement('p', { className: "text-gray-400 text-center py-8" }, "Нет доступных компьютеров") :
+                            React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" },
+                                products.map(product =>
+                                    React.createElement('div', {
+                                        key: product.id,
+                                        className: "neon-card p-6 cursor-pointer",
+                                        onClick: () => setSelectedProduct(product)
+                                    },
+                                        React.createElement('div', { className: "flex items-center justify-center h-48 bg-gray-900/50 rounded-lg mb-4" },
+                                            React.createElement('img', {
+                                                src: product.image,
+                                                alt: product.name,
+                                                className: "max-h-full max-w-full object-contain p-4",
+                                                onError: (e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `${API_BASE_URL}/static/imgs/default.png`;
+                                                }
+                                            })
+                                        ),
+                                        React.createElement('div', null,
+                                            React.createElement('h3', { className: "font-bold text-lg mb-2 neon-text neon-blue" }, product.name),
+                                            React.createElement('p', { className: "text-2xl font-bold neon-text neon-green mb-3" }, `${product.price.toLocaleString()} ₽`),
+                                            React.createElement('p', { className: "text-gray-300 text-sm mb-4" }, product.description),
+                                            React.createElement('button', {
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    addToCart(product);
+                                                },
+                                                className: "neon-button w-full"
+                                            }, "Добавить в корзину")
+                                        )
+                                    )
+                                )
+                            )
+                    ),
+
+                    activeTab === 'orders' && React.createElement('div', null,
+                        React.createElement('h2', { className: "text-2xl font-bold mb-8 neon-text neon-purple text-center" }, "История заказов"),
+                        orders.length === 0 ?
+                            React.createElement('p', { className: "text-gray-400 text-center py-8" }, "Нет активных заказов") :
+                            React.createElement('div', { className: "space-y-6" },
+                                orders.map(order => {
+                                    const statusText = {
+                                        pending: '⏳ Ожидает доставки',
+                                        onWay: '🚚 В пути',
+                                        delivered: '✅ Доставлен',
+                                        cancelled: '❌ Отменен'
+                                    }[order.status] || order.status;
+
+                                    const statusColor = {
+                                        pending: 'bg-yellow-900/30 text-yellow-400 border-yellow-400/30',
+                                        onWay: 'bg-blue-900/30 text-blue-400 border-blue-400/30',
+                                        delivered: 'bg-green-900/30 text-green-400 border-green-400/30',
+                                        cancelled: 'bg-red-900/30 text-red-400 border-red-400/30'
+                                    }[order.status] || 'bg-gray-900/30 text-gray-400 border-gray-400/30';
+
+                                    return React.createElement('div', {
+                                        key: order.id,
+                                        className: "neon-card p-6"
+                                    },
+                                        React.createElement('div', { className: "flex justify-between items-start mb-6" },
+                                            React.createElement('div', null,
+                                                React.createElement('h3', { className: "font-bold text-xl neon-text neon-blue mb-1" }, `Заказ #${order.id}`),
+                                                React.createElement('p', { className: "text-sm text-gray-400" },
+                                                    `Создан: ${new Date(order.created_at).toLocaleDateString('ru-RU', { 
+                                                        year: 'numeric', 
+                                                        month: 'long', 
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}`
+                                                )
+                                            ),
+                                            React.createElement('span', {
+                                                className: `${statusColor} px-4 py-2 rounded-full text-sm font-medium border`
+                                            }, statusText)
+                                        ),
+
+                                        React.createElement('div', { className: "mb-6" },
+                                            React.createElement('h4', { className: "font-medium text-gray-300 mb-3" }, "Конфигурация:"),
+                                            React.createElement('ul', { className: "space-y-2" },
+                                                order.items.map(item =>
+                                                    React.createElement('li', { key: item.id, className: "flex justify-between items-center bg-gray-900/30 p-3 rounded" },
+                                                        React.createElement('span', null, `${item.product_name} x${item.quantity}`),
+                                                        React.createElement('span', { className: "font-bold neon-green" }, `${(item.price * item.quantity).toLocaleString()} ₽`)
+                                                    )
+                                                )
+                                            )
+                                        ),
+
+                                        React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" },
+                                            React.createElement('div', { className: "bg-gray-900/30 p-4 rounded" },
+                                                React.createElement('p', { className: "text-gray-400 mb-1" }, "📅 Дата доставки"),
+                                                React.createElement('p', { className: "font-bold" }, new Date(order.delivery_date).toLocaleDateString('ru-RU'))
+                                            ),
+                                            React.createElement('div', { className: "bg-gray-900/30 p-4 rounded" },
+                                                React.createElement('p', { className: "text-gray-400 mb-1" }, "🕐 Время доставки"),
+                                                React.createElement('p', { className: "font-bold" }, order.delivery_time)
+                                            ),
+                                            React.createElement('div', { className: "bg-gray-900/30 p-4 rounded" },
+                                                React.createElement('p', { className: "text-gray-400 mb-1" }, "📦 Адрес доставки"),
+                                                React.createElement('p', { className: "font-bold" }, order.delivery_address)
+                                            ),
+                                            React.createElement('div', { className: "bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 p-4 rounded" },
+                                                React.createElement('p', { className: "text-gray-400 mb-1" }, "💰 Итоговая сумма"),
+                                                React.createElement('p', { className: "font-bold text-2xl neon-green" }, `${order.total_price.toLocaleString()} ₽`)
+                                            )
+                                        ),
+
+                                        order.status === 'pending' && React.createElement('div', { className: "flex space-x-3" },
+                                            React.createElement('button', {
+                                                onClick: () => startEditOrder(order),
+                                                className: "neon-button"
+                                            }, "Изменить доставку"),
+                                            React.createElement('button', {
+                                                onClick: () => cancelOrder(order.id),
+                                                className: "bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-2 rounded-lg font-bold hover:shadow-lg hover:shadow-red-500/30 transition"
+                                            }, "Отменить заказ")
+                                        )
+                                    );
+                                })
+                            )
+                    )
+                ),
+
+                selectedProduct && React.createElement('div', {
+                    className: "fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50",
+                    onClick: () => setSelectedProduct(null)
+                },
+                    React.createElement('div', {
+                        className: "neon-card max-w-2xl w-full max-h-[90vh] overflow-y-auto",
+                        onClick: e => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "p-6" },
+                            React.createElement('div', { className: "flex justify-between items-start mb-6" },
+                                React.createElement('h2', { className: "text-2xl font-bold neon-text neon-blue" }, selectedProduct.name),
+                                React.createElement('button', {
+                                    onClick: () => setSelectedProduct(null),
+                                    className: "text-gray-400 hover:text-white text-2xl"
+                                }, "×")
+                            ),
+                            React.createElement('div', { className: "flex items-center justify-center h-64 bg-gray-900/50 rounded-lg mb-6" },
+                                React.createElement('img', {
+                                    src: selectedProduct.image,
+                                    alt: selectedProduct.name,
+                                    className: "max-h-full max-w-full object-contain p-4",
+                                    onError: (e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = `${API_BASE_URL}/static/imgs/default.png`;
+                                    }
+                                })
+                            ),
+                            React.createElement('p', { className: "text-gray-300 mb-6 text-lg" }, selectedProduct.description),
+                            React.createElement('div', { className: "flex justify-between items-center" },
+                                React.createElement('span', { className: "text-3xl font-bold neon-text neon-green" }, `${selectedProduct.price.toLocaleString()} ₽`),
+                                React.createElement('button', {
+                                    onClick: () => addToCart(selectedProduct),
+                                    className: "neon-button px-8 py-3 text-lg"
+                                }, "Добавить в корзину")
+                            )
+                        )
+                    )
+                ),
+
+                showCart && React.createElement('div', {
+                    className: "fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50",
+                    onClick: () => setShowCart(false)
+                },
+                    React.createElement('div', {
+                        className: "neon-card max-w-3xl w-full max-h-[90vh] overflow-y-auto",
+                        onClick: e => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "p-6" },
+                            React.createElement('div', { className: "flex justify-between items-center mb-8" },
+                                React.createElement('h2', { className: "text-2xl font-bold neon-text neon-purple" }, "🛒 Корзина"),
+                                React.createElement('button', {
+                                    onClick: () => setShowCart(false),
+                                    className: "text-gray-400 hover:text-white text-2xl"
+                                }, "×")
+                            ),
+
+                            cart.length === 0 ?
+                                React.createElement('div', { className: "text-center py-12" },
+                                    React.createElement('div', { className: "text-6xl mb-4" }, "🖥️"),
+                                    React.createElement('p', { className: "text-gray-400 text-xl" }, "Корзина пуста")
+                                ) :
+                                React.createElement(React.Fragment, null,
+                                    React.createElement('div', { className: "space-y-4 mb-8" },
+                                        cart.map(item =>
+                                            React.createElement('div', {
+                                                key: item.id,
+                                                className: "flex items-center justify-between p-4 bg-gray-900/30 rounded-lg"
+                                            },
+                                                React.createElement('div', { className: "flex items-center space-x-4" },
+                                                    React.createElement('div', { className: "flex items-center justify-center w-20 h-20 bg-gray-800 rounded" },
+                                                        React.createElement('img', {
+                                                            src: item.image,
+                                                            alt: item.name,
+                                                            className: "max-h-full max-w-full object-contain p-2",
+                                                            onError: (e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.src = `${API_BASE_URL}/static/imgs/default.png`;
+                                                            }
+                                                        })
+                                                    ),
+                                                    React.createElement('div', null,
+                                                        React.createElement('p', { className: "font-bold neon-blue" }, item.name),
+                                                        React.createElement('p', { className: "text-xl font-bold neon-green" }, `${item.price.toLocaleString()} ₽`)
+                                                    )
+                                                ),
+                                                React.createElement('div', { className: "flex items-center space-x-4" },
+                                                    React.createElement('div', { className: "flex items-center space-x-3" },
+                                                        React.createElement('button', {
+                                                            onClick: () => updateQuantity(item.id, item.quantity - 1),
+                                                            className: "bg-gray-800 w-10 h-10 rounded flex items-center justify-center hover:bg-gray-700 text-xl"
+                                                        }, "-"),
+                                                        React.createElement('span', { className: "w-10 text-center text-xl font-bold" }, item.quantity),
+                                                        React.createElement('button', {
+                                                            onClick: () => updateQuantity(item.id, item.quantity + 1),
+                                                            className: "bg-gray-800 w-10 h-10 rounded flex items-center justify-center hover:bg-gray-700 text-xl"
+                                                        }, "+")
+                                                    ),
+                                                    React.createElement('button', {
+                                                        onClick: () => removeFromCart(item.id),
+                                                        className: "text-red-400 hover:text-red-300 text-2xl ml-4"
+                                                    }, "🗑️")
+                                                )
+                                            )
+                                        )
+                                    ),
+
+                                    React.createElement('div', { className: "border-t border-gray-700 pt-6 mb-8" },
+                                        React.createElement('div', { className: "flex justify-between text-2xl font-bold" },
+                                            React.createElement('span', { className: "neon-purple" }, "Итого:"),
+                                            React.createElement('span', { className: "neon-text neon-green" },
+                                                `${cart.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString()} ₽`
+                                            )
+                                        )
+                                    ),
+
+                                    React.createElement('div', { className: "space-y-6 mb-8" },
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "block mb-2 font-medium neon-blue" }, "📅 Дата доставки"),
+                                            React.createElement('select', {
+                                                value: deliveryDate,
+                                                onChange: e => setDeliveryDate(e.target.value),
+                                                className: "w-full p-3 rounded-lg"
+                                            },
+                                                React.createElement('option', { value: "" }, "Выберите дату"),
+                                                getAvailableDates().map(date =>
+                                                    React.createElement('option', { key: date.value, value: date.value }, date.label)
+                                                )
+                                            )
+                                        ),
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "block mb-2 font-medium neon-blue" }, "🕐 Время доставки"),
+                                            React.createElement('select', {
+                                                value: deliveryTime,
+                                                onChange: e => setDeliveryTime(e.target.value),
+                                                className: "w-full p-3 rounded-lg"
+                                            },
+                                                React.createElement('option', { value: "" }, "Выберите время"),
+                                                deliveryTimes.map(time =>
+                                                    React.createElement('option', { key: time.value, value: time.value }, time.label)
+                                                )
+                                            )
+                                        ),
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "block mb-2 font-medium neon-blue" }, "📍 Адрес доставки"),
+                                            React.createElement('textarea', {
+                                                value: deliveryAddress,
+                                                onChange: e => setDeliveryAddress(e.target.value),
+                                                placeholder: "Введите полный адрес доставки...",
+                                                className: "w-full p-3 rounded-lg",
+                                                rows: 3
+                                            })
+                                        )
+                                    ),
+
+                                    React.createElement('button', {
+                                        onClick: placeOrder,
+                                        disabled: !deliveryDate || !deliveryTime || !deliveryAddress,
+                                        className: `w-full py-4 rounded-lg font-bold text-xl transition ${!deliveryDate || !deliveryTime || !deliveryAddress ? 'bg-gray-700 cursor-not-allowed' : 'neon-button'}`
+                                    }, "🎮 Оформить заказ")
+                                )
+                        )
+                    )
+                ),
+
+                editingOrder && React.createElement('div', {
+                    className: "fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50",
+                    onClick: () => setEditingOrder(null)
+                },
+                    React.createElement('div', {
+                        className: "neon-card max-w-md w-full",
+                        onClick: e => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "p-6" },
+                            React.createElement('div', { className: "flex justify-between items-center mb-8" },
+                                React.createElement('h2', { className: "text-xl font-bold neon-text neon-blue" }, "✏️ Изменить доставку"),
+                                React.createElement('button', {
+                                    onClick: () => setEditingOrder(null),
+                                    className: "text-gray-400 hover:text-white text-2xl"
+                                }, "×")
+                            ),
+
+                            React.createElement('div', { className: "space-y-4 mb-8" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block mb-2 font-medium" }, "Дата доставки"),
+                                    React.createElement('select', {
+                                        value: editingOrder.delivery_date,
+                                        onChange: e => setEditingOrder({...editingOrder, delivery_date: e.target.value}),
+                                        className: "w-full p-3 rounded-lg"
+                                    },
+                                        React.createElement('option', { value: "" }, "Выберите дату"),
+                                        getAvailableDates().map(date =>
+                                            React.createElement('option', { key: date.value, value: date.value }, date.label)
+                                        )
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block mb-2 font-medium" }, "Время доставки"),
+                                    React.createElement('select', {
+                                        value: editingOrder.delivery_time,
+                                        onChange: e => setEditingOrder({...editingOrder, delivery_time: e.target.value}),
+                                        className: "w-full p-3 rounded-lg"
+                                    },
+                                        React.createElement('option', { value: "" }, "Выберите время"),
+                                        deliveryTimes.map(time =>
+                                            React.createElement('option', { key: time.value, value: time.value }, time.label)
+                                        )
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block mb-2 font-medium" }, "Адрес доставки"),
+                                    React.createElement('textarea', {
+                                        value: editingOrder.delivery_address,
+                                        onChange: e => setEditingOrder({...editingOrder, delivery_address: e.target.value}),
+                                        placeholder: "Введите полный адрес доставки...",
+                                        className: "w-full p-3 rounded-lg",
+                                        rows: 3
+                                    })
+                                )
+                            ),
+
+                            React.createElement('div', { className: "flex space-x-4" },
+                                React.createElement('button', {
+                                    onClick: saveEditedOrder,
+                                    className: "neon-button flex-1"
+                                }, "💾 Сохранить"),
+                                React.createElement('button', {
+                                    onClick: () => setEditingOrder(null),
+                                    className: "bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold flex-1 transition"
+                                }, "Отмена")
+                            )
+                        )
+                    )
+                )
+            );
+        };
+
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
